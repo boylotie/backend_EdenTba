@@ -9,3 +9,4 @@
 - Référence : `Docs/ROADMAP.md` — MOD-05, MOD-06
 
 Règles : formats et taille autorisés configurables ; stockage privé ; seuls les contenus `publié` sont visibles publiquement.
+Cache public : liste/détail cache-és TTL 300 s, clé versionnée (`ContentService::PUBLIC_CACHE_VERSION_KEY`) invalidée à chaque écriture (création, mise à jour, suppression, transition) — MOD-12-P2.

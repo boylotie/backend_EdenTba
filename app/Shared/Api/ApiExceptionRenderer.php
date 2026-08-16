@@ -10,6 +10,7 @@ use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -50,7 +51,8 @@ final class ApiExceptionRenderer
                 401,
             ),
 
-            $exception instanceof AuthorizationException => ApiResponse::error(
+            $exception instanceof AuthorizationException,
+            $exception instanceof AccessDeniedHttpException => ApiResponse::error(
                 'forbidden',
                 __('Accès refusé.'),
                 403,

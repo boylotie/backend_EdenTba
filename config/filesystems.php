@@ -47,6 +47,26 @@ return [
             'report' => false,
         ],
 
+        // MOD-05 (D-05) : stockage privé des fichiers audio. Aucun accès public
+        // au fichier brut ; la lecture passe par l'API (streaming contrôlé).
+        'audio' => [
+            'driver' => 'local',
+            'root' => storage_path('app/audio'),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => false,
+        ],
+
+        // MOD-05-P2 : stockage privé des visuels associés aux contenus (US-023).
+        // Servis uniquement via l'API publique (image), jamais en accès brut.
+        'content_images' => [
+            'driver' => 'local',
+            'root' => storage_path('app/content-images'),
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

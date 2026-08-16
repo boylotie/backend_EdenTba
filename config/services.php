@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'expo' => [
+        'endpoint' => env('EXPO_PUSH_ENDPOINT', 'https://exp.host/--/api/v2/push/send'),
+    ],
+
 ];

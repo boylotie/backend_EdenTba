@@ -1,11 +1,8 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Support\Facades\Log;
 
 it('crée un compte et retourne un token', function () {
-    Log::spy();
-
     $this->postJson('/api/v1/auth/register', [
         'name' => 'Jean',
         'email' => 'jean@exemple.org',
@@ -19,9 +16,10 @@ it('crée un compte et retourne un token', function () {
         ])
         ->assertJsonPath('error', null);
 
-    $this->assertDatabaseHas('users', ['email' => 'jean@exemple.org']);
+    $user = User::where('email', 'jean@exemple.org')->firstOrFail();
 
-    Log::shouldHaveReceived('info')->once()->withArgs(fn (string $message) => $message === 'auth.register');
+    $this->assertDatabaseHas('users', ['email' => 'jean@exemple.org']);
+    $this->assertDatabaseHas('audit_logs', ['action' => 'auth.register', 'actor_id' => $user->id]);
 });
 
 it('renvoie une 422 pour un e-mail déjà utilisé', function () {

@@ -9,3 +9,4 @@
 - Référence : `Docs/ROADMAP.md` — MOD-03
 
 Règles : les jours et heures de programme sont configurables, jamais codés en dur.
+Cache public : navigation cache-ée TTL 300 s, clé versionnée (`OrganizationPublicCache::VERSION_KEY`) invalidée à chaque écriture (années, mois, semaines, programmes) — MOD-12-P2.

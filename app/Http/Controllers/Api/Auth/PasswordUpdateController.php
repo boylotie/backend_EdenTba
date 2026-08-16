@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\UpdatePasswordRequest;
 use App\Shared\Api\ApiResponse;
+use App\Shared\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Log;
 
 class PasswordUpdateController extends Controller
 {
@@ -22,7 +22,7 @@ class PasswordUpdateController extends Controller
 
         $user->tokens()->where('id', '!=', $user->currentAccessToken()->id)->delete();
 
-        Log::info('auth.password.change', ['user_id' => $user->id]);
+        AuditLogger::log('auth.password.change', actorId: $user->id, entityType: 'user', entityId: $user->id);
 
         return ApiResponse::success(['message' => 'Mot de passe modifié.']);
     }

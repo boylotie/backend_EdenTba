@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
 use App\Shared\Api\ApiResponse;
+use App\Shared\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -20,20 +20,20 @@ class AuthenticatedSessionController extends Controller
         $user = User::where('email', $credentials['email'])->first();
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
-            Log::info('auth.login.failed', ['email' => $credentials['email']]);
+            AuditLogger::log('auth.login.failed', ['email' => $credentials['email']]);
 
             return ApiResponse::error('invalid_credentials', 'Identifiants incorrects.', 401);
         }
 
         if (! $user->is_active) {
-            Log::info('auth.login.disabled', ['user_id' => $user->id]);
+            AuditLogger::log('auth.login.disabled', actorId: $user->id, entityType: 'user', entityId: $user->id);
 
             return ApiResponse::error('account_disabled', 'Compte désactivé.', 403);
         }
 
         $token = $user->createToken('mobile')->plainTextToken;
 
-        Log::info('auth.login', ['user_id' => $user->id]);
+        AuditLogger::log('auth.login', actorId: $user->id, entityType: 'user', entityId: $user->id);
 
         return ApiResponse::success(['user' => $user, 'token' => $token]);
     }
@@ -53,7 +53,7 @@ class AuthenticatedSessionController extends Controller
 
         $user->currentAccessToken()->delete();
 
-        Log::info('auth.logout', ['user_id' => $user->id]);
+        AuditLogger::log('auth.logout', actorId: $user->id, entityType: 'user', entityId: $user->id);
 
         return ApiResponse::success();
     }

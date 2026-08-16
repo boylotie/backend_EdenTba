@@ -25,13 +25,16 @@ final class ApiResponse
     }
 
     /**
-     * @param  LengthAwarePaginator<int|string, mixed>  $paginator
+     * @template TValue of mixed
+     *
+     * @param  LengthAwarePaginator<int, TValue>  $paginator
+     * @param  array<string, mixed>|null  $extraMeta  métadonnées fusionnées après `pagination`
      */
-    public static function paginate(LengthAwarePaginator $paginator): JsonResponse
+    public static function paginate(LengthAwarePaginator $paginator, ?array $extraMeta = null): JsonResponse
     {
         return self::success(
             data: $paginator->items(),
-            meta: [
+            meta: array_merge([
                 'pagination' => [
                     'current_page' => $paginator->currentPage(),
                     'per_page' => $paginator->perPage(),
@@ -41,7 +44,7 @@ final class ApiResponse
                     'last_item' => $paginator->lastItem(),
                     'has_more_pages' => $paginator->hasMorePages(),
                 ],
-            ],
+            ], $extraMeta ?? []),
         );
     }
 
