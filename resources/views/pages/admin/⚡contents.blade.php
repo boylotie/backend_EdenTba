@@ -5,6 +5,7 @@ use App\Modules\Content\Models\Content;
 use App\Modules\Content\Services\ContentService;
 use App\Modules\Content\Storage\AudioStorage;
 use App\Modules\Organization\Models\Month;
+use App\Modules\Organization\Models\Program;
 use App\Modules\Organization\Models\Week;
 use App\Modules\Organization\Models\Year;
 use App\Modules\SpecialActivities\Models\SpecialActivity;
@@ -17,7 +18,8 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
-new #[Title('Contenus audio')] class extends Component {
+new #[Title('Contenus audio')] class extends Component
+{
     use WithFileUploads;
 
     #[Url(except: '')]
@@ -46,6 +48,14 @@ new #[Title('Contenus audio')] class extends Component {
 
     public ?int $createActivityId = null;
 
+    public ?int $createDayOfWeek = null;
+
+    public string $createNotes = '';
+
+    public string $createApprovedBy = '';
+
+    public string $createApprovalComment = '';
+
     public ?int $editId = null;
 
     public string $editTitle = '';
@@ -65,6 +75,14 @@ new #[Title('Contenus audio')] class extends Component {
     public ?int $editWeekId = null;
 
     public ?int $editActivityId = null;
+
+    public ?int $editDayOfWeek = null;
+
+    public string $editNotes = '';
+
+    public string $editApprovedBy = '';
+
+    public string $editApprovalComment = '';
 
     public $editAudioFile;
 
@@ -180,6 +198,30 @@ new #[Title('Contenus audio')] class extends Component {
             ])->all();
     }
 
+    public function getCreateDayProgramTypeProperty(): ?string
+    {
+        if ($this->createWeekId === null || $this->createDayOfWeek === null) {
+            return null;
+        }
+
+        return Program::query()
+            ->where('week_id', $this->createWeekId)
+            ->where('day_of_week', $this->createDayOfWeek)
+            ->value('type');
+    }
+
+    public function getEditDayProgramTypeProperty(): ?string
+    {
+        if ($this->editWeekId === null || $this->editDayOfWeek === null) {
+            return null;
+        }
+
+        return Program::query()
+            ->where('week_id', $this->editWeekId)
+            ->where('day_of_week', $this->editDayOfWeek)
+            ->value('type');
+    }
+
     public function updatedCreateYearId(): void
     {
         $this->createMonthId = null;
@@ -232,6 +274,10 @@ new #[Title('Contenus audio')] class extends Component {
             'createMonthId' => ['nullable', 'integer', 'exists:months,id'],
             'createWeekId' => ['nullable', 'integer', 'exists:weeks,id'],
             'createActivityId' => ['nullable', 'integer', 'exists:special_activities,id'],
+            'createDayOfWeek' => ['nullable', 'integer', 'between:1,7'],
+            'createNotes' => ['nullable', 'string', 'max:10000'],
+            'createApprovedBy' => ['nullable', 'string', 'max:255'],
+            'createApprovalComment' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $this->ensureOrgConsistency(
@@ -253,9 +299,13 @@ new #[Title('Contenus audio')] class extends Component {
             'month_id' => $this->createMonthId,
             'week_id' => $this->createWeekId,
             'special_activity_id' => $this->createActivityId,
+            'day_of_week' => $this->createDayOfWeek,
+            'notes' => $this->createNotes !== '' ? trim($this->createNotes) : null,
+            'approved_by' => $this->createApprovedBy !== '' ? trim($this->createApprovedBy) : null,
+            'approval_comment' => $this->createApprovalComment !== '' ? trim($this->createApprovalComment) : null,
         ], $this->imageFile);
 
-        $this->reset('audioFile', 'imageFile', 'createTitle', 'createDescription', 'createSpeaker', 'createYearId', 'createMonthId', 'createHasWeek', 'createWeekId', 'createActivityId');
+        $this->reset('audioFile', 'imageFile', 'createTitle', 'createDescription', 'createSpeaker', 'createYearId', 'createMonthId', 'createHasWeek', 'createWeekId', 'createActivityId', 'createDayOfWeek', 'createNotes', 'createApprovedBy', 'createApprovalComment');
         $this->createYearId = Year::query()->where('is_current', true)->value('id');
 
         Flux::toast(variant: 'success', text: __('Contenu créé.'));
@@ -277,6 +327,10 @@ new #[Title('Contenus audio')] class extends Component {
         $this->editHasWeek = $content->week_id !== null || $content->special_activity_id !== null;
         $this->editWeekId = $content->week_id;
         $this->editActivityId = $content->special_activity_id;
+        $this->editDayOfWeek = $content->day_of_week;
+        $this->editNotes = $content->notes ?? '';
+        $this->editApprovedBy = $content->approved_by ?? '';
+        $this->editApprovalComment = $content->approval_comment ?? '';
 
         $this->modal('edit-content')->show();
     }
@@ -298,6 +352,10 @@ new #[Title('Contenus audio')] class extends Component {
             'editMonthId' => ['nullable', 'integer', 'exists:months,id'],
             'editWeekId' => ['nullable', 'integer', 'exists:weeks,id'],
             'editActivityId' => ['nullable', 'integer', 'exists:special_activities,id'],
+            'editDayOfWeek' => ['nullable', 'integer', 'between:1,7'],
+            'editNotes' => ['nullable', 'string', 'max:10000'],
+            'editApprovedBy' => ['nullable', 'string', 'max:255'],
+            'editApprovalComment' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $this->ensureOrgConsistency(
@@ -320,6 +378,10 @@ new #[Title('Contenus audio')] class extends Component {
             'month_id' => $this->editMonthId,
             'week_id' => $this->editWeekId,
             'special_activity_id' => $this->editActivityId,
+            'day_of_week' => $this->editDayOfWeek,
+            'notes' => $this->editNotes !== '' ? trim($this->editNotes) : null,
+            'approved_by' => $this->editApprovedBy !== '' ? trim($this->editApprovedBy) : null,
+            'approval_comment' => $this->editApprovalComment !== '' ? trim($this->editApprovalComment) : null,
             'sort_order' => $content->sort_order,
         ], $this->editAudioFile, $this->editImageFile);
 
@@ -455,6 +517,10 @@ new #[Title('Contenus audio')] class extends Component {
     {
         $parts = [];
 
+        if ($content->day_of_week !== null) {
+            $parts[] = Content::DAYS[$content->day_of_week] ?? (string) $content->day_of_week;
+        }
+
         if ($content->year !== null) {
             $parts[] = $content->year->label;
         }
@@ -526,7 +592,7 @@ new #[Title('Contenus audio')] class extends Component {
         <flux:card>
             <flux:heading>{{ __('Nouveau contenu') }}</flux:heading>
             <flux:text class="mt-1">
-                {{ __('Choisissez le fichier audio, le titre, puis l\'année et le mois. La semaine ne sert que pour les cas particuliers (séminaire, activité spéciale).') }}
+                {{ __('Choisissez le fichier audio, le titre, l\'année, le mois et le jour de la semaine. La semaine et l\'activité spéciale ne servent que pour les cas particuliers (séminaire, semaine de prière…).') }}
             </flux:text>
 
             <div class="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -588,7 +654,7 @@ new #[Title('Contenus audio')] class extends Component {
                 @if ($createHasWeek)
                     <flux:field>
                         <flux:label>{{ __('Semaine') }}</flux:label>
-                        <flux:select wire:model="createWeekId">
+                        <flux:select wire:model.live="createWeekId">
                             <option value="">—</option>
                             @foreach ($this->createWeeks as $week)
                                 <option value="{{ $week['id'] }}">{{ $week['label'] }}</option>
@@ -608,6 +674,43 @@ new #[Title('Contenus audio')] class extends Component {
                         <flux:error name="createActivityId" />
                     </flux:field>
                 @endif
+
+                <flux:field class="lg:col-span-1">
+                    <flux:label>{{ __('Jour de la semaine') }}</flux:label>
+                    <flux:select wire:model.live="createDayOfWeek">
+                        <option value="">—</option>
+                        @foreach (\App\Modules\Content\Models\Content::DAYS as $dayValue => $dayLabel)
+                            <option value="{{ $dayValue }}">{{ $dayLabel }}</option>
+                        @endforeach
+                    </flux:select>
+                    <flux:error name="createDayOfWeek" />
+                    @if ($this->createDayProgramType !== null)
+                        <flux:text class="mt-1" size="sm">{{ $this->createDayProgramType }}</flux:text>
+                    @endif
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>{{ __('Notes de prédication') }}</flux:label>
+                    <flux:textarea wire:model="createNotes" rows="3" />
+                    <flux:error name="createNotes" />
+                </flux:field>
+
+                <flux:field class="lg:col-span-3">
+                    <flux:heading size="sm">{{ __('Approbation (compte-rendu)') }}</flux:heading>
+                    <flux:text class="mt-1">{{ __('Facultatif : nom de l\'approbateur et commentaire. La date d\'approbation est posée automatiquement.') }}</flux:text>
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>{{ __('Approuvé par') }}</flux:label>
+                    <flux:input wire:model="createApprovedBy" />
+                    <flux:error name="createApprovedBy" />
+                </flux:field>
+
+                <flux:field>
+                    <flux:label>{{ __('Commentaire') }}</flux:label>
+                    <flux:textarea wire:model="createApprovalComment" rows="2" />
+                    <flux:error name="createApprovalComment" />
+                </flux:field>
 
                 <flux:field class="lg:col-span-3">
                     <flux:label>{{ __('Description') }}</flux:label>
@@ -754,7 +857,7 @@ new #[Title('Contenus audio')] class extends Component {
                     @if ($editHasWeek)
                         <flux:field>
                             <flux:label>{{ __('Semaine') }}</flux:label>
-                            <flux:select wire:model="editWeekId">
+                            <flux:select wire:model.live="editWeekId">
                                 <option value="">—</option>
                                 @foreach ($this->editWeeks as $week)
                                     <option value="{{ $week['id'] }}">{{ $week['label'] }}</option>
@@ -774,6 +877,43 @@ new #[Title('Contenus audio')] class extends Component {
                             <flux:error name="editActivityId" />
                         </flux:field>
                     @endif
+
+                    <flux:field>
+                        <flux:label>{{ __('Jour de la semaine') }}</flux:label>
+                        <flux:select wire:model.live="editDayOfWeek">
+                            <option value="">—</option>
+                            @foreach (\App\Modules\Content\Models\Content::DAYS as $dayValue => $dayLabel)
+                                <option value="{{ $dayValue }}">{{ $dayLabel }}</option>
+                            @endforeach
+                        </flux:select>
+                        <flux:error name="editDayOfWeek" />
+                        @if ($this->editDayProgramType !== null)
+                            <flux:text class="mt-1" size="sm">{{ $this->editDayProgramType }}</flux:text>
+                        @endif
+                    </flux:field>
+
+                    <flux:field class="lg:col-span-2">
+                        <flux:label>{{ __('Notes de prédication') }}</flux:label>
+                        <flux:textarea wire:model="editNotes" rows="3" />
+                        <flux:error name="editNotes" />
+                    </flux:field>
+
+                    <flux:field class="lg:col-span-2">
+                        <flux:heading size="sm">{{ __('Approbation (compte-rendu)') }}</flux:heading>
+                        <flux:text class="mt-1">{{ __('Facultatif : nom de l\'approbateur et commentaire.') }}</flux:text>
+                    </flux:field>
+
+                    <flux:field>
+                        <flux:label>{{ __('Approuvé par') }}</flux:label>
+                        <flux:input wire:model="editApprovedBy" />
+                        <flux:error name="editApprovedBy" />
+                    </flux:field>
+
+                    <flux:field>
+                        <flux:label>{{ __('Commentaire') }}</flux:label>
+                        <flux:textarea wire:model="editApprovalComment" rows="2" />
+                        <flux:error name="editApprovalComment" />
+                    </flux:field>
 
                     <flux:field class="lg:col-span-2">
                         <flux:label>{{ __('Remplacer le fichier audio') }}</flux:label>

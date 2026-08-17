@@ -229,7 +229,7 @@ class ContentController extends Controller
     }
 
     /**
-     * @return array{title: string, description: string|null, duration_seconds: int|null, speaker: string|null, year_id: int|null, month_id: int|null, week_id: int|null, special_activity_id: int|null, scheduled_at: string|null, sort_order: int}
+     * @return array{title: string, description: string|null, duration_seconds: int|null, speaker: string|null, year_id: int|null, month_id: int|null, week_id: int|null, special_activity_id: int|null, day_of_week: int|null, notes: string|null, approved_by: string|null, approval_comment: string|null, approved_at: string|null, scheduled_at: string|null, sort_order: int}
      */
     private function contentData(StoreContentRequest|UpdateContentRequest $request): array
     {
@@ -242,6 +242,11 @@ class ContentController extends Controller
             'month_id' => $request->filled('month_id') ? (int) $request->integer('month_id') : null,
             'week_id' => $request->filled('week_id') ? (int) $request->integer('week_id') : null,
             'special_activity_id' => $request->filled('special_activity_id') ? (int) $request->integer('special_activity_id') : null,
+            'day_of_week' => $request->filled('day_of_week') ? (int) $request->integer('day_of_week') : null,
+            'notes' => $request->filled('notes') ? (string) $request->string('notes') : null,
+            'approved_by' => $request->filled('approved_by') ? (string) $request->string('approved_by') : null,
+            'approval_comment' => $request->filled('approval_comment') ? (string) $request->string('approval_comment') : null,
+            'approved_at' => $request->filled('approved_at') ? (string) $request->string('approved_at') : null,
             'scheduled_at' => $request->filled('scheduled_at') ? (string) $request->string('scheduled_at') : null,
             'sort_order' => $request->filled('sort_order') ? (int) $request->integer('sort_order') : 0,
         ];

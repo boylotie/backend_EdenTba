@@ -379,6 +379,15 @@ new #[Title('Direct (live)')] class extends Component {
             });
 
             if (response.status === 409) {
+                setError('Direct terminé : l’envoi de la capture a été arrêté.');
+                await stopCapture();
+            } else if (response.status === 422) {
+                let message = 'Chunk refusé par le serveur.';
+                try {
+                    const body = await response.json();
+                    if (body && body.message) message = body.message;
+                } catch (e) {}
+                setError(message);
                 await stopCapture();
             }
         }

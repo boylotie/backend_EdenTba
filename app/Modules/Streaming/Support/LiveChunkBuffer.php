@@ -17,7 +17,7 @@ final class LiveChunkBuffer
 {
     public const MAX_CHUNK_BYTES = 1_048_576;
 
-    public const MAX_BUFFER_BYTES = 134_217_728;
+    public const MAX_BUFFER_BYTES = 314_572_800;
 
     private const CHUNK_PREFIX = 'chunk-';
 
