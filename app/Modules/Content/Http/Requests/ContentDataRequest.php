@@ -46,6 +46,7 @@ abstract class ContentDataRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:5000'],
             'duration_seconds' => ['nullable', 'integer', 'min:0'],
             'speaker' => ['nullable', 'string', 'max:255'],
+            'speaker_id' => ['nullable', 'integer', 'exists:speakers,id'],
             'year_id' => ['nullable', 'integer', 'exists:years,id'],
             'month_id' => ['nullable', 'integer', 'exists:months,id'],
             'week_id' => ['nullable', 'integer', 'exists:weeks,id'],

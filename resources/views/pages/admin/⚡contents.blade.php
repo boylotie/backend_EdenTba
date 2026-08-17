@@ -8,6 +8,7 @@ use App\Modules\Organization\Models\Month;
 use App\Modules\Organization\Models\Program;
 use App\Modules\Organization\Models\Week;
 use App\Modules\Organization\Models\Year;
+use App\Modules\Speakers\Models\Speaker;
 use App\Modules\SpecialActivities\Models\SpecialActivity;
 use App\Settings\SettingsService;
 use Flux\Flux;
@@ -38,6 +39,8 @@ new #[Title('Contenus audio')] class extends Component
 
     public string $createSpeaker = '';
 
+    public ?int $createSpeakerId = null;
+
     public ?int $createYearId = null;
 
     public ?int $createMonthId = null;
@@ -63,6 +66,8 @@ new #[Title('Contenus audio')] class extends Component
     public string $editDescription = '';
 
     public string $editSpeaker = '';
+
+    public ?int $editSpeakerId = null;
 
     public ?int $editDuration = null;
 
@@ -102,12 +107,13 @@ new #[Title('Contenus audio')] class extends Component
     public function getRowsProperty(): LengthAwarePaginator
     {
         return Content::query()
-            ->with(['year:id,label', 'week:id,label', 'specialActivity:id,name'])
+            ->with(['year:id,label', 'week:id,label', 'specialActivity:id,name', 'speakerRel:id,name,title'])
             ->when($this->search !== '', function ($query) {
                 $query->where(function ($query): void {
                     $query->where('title', 'like', "%{$this->search}%")
                         ->orWhere('description', 'like', "%{$this->search}%")
-                        ->orWhere('speaker', 'like', "%{$this->search}%");
+                        ->orWhere('speaker', 'like', "%{$this->search}%")
+                        ->orWhereHas('speakerRel', fn ($q) => $q->where('name', 'like', "%{$this->search}%"));
                 });
             })
             ->when($this->statusFilter !== '', fn ($query) => $query->where('status', $this->statusFilter))
@@ -222,6 +228,22 @@ new #[Title('Contenus audio')] class extends Component
             ->value('type');
     }
 
+    /**
+     * @return list<array{id: int, label: string}>
+     */
+    public function getSpeakersProperty(): array
+    {
+        return Speaker::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Speaker $s): array => [
+                'id' => $s->id,
+                'label' => $s->label(),
+            ])
+            ->all();
+    }
+
     public function updatedCreateYearId(): void
     {
         $this->createMonthId = null;
@@ -270,6 +292,7 @@ new #[Title('Contenus audio')] class extends Component
             'createTitle' => ['required', 'string', 'max:255'],
             'createDescription' => ['nullable', 'string', 'max:5000'],
             'createSpeaker' => ['nullable', 'string', 'max:255'],
+            'createSpeakerId' => ['nullable', 'integer', 'exists:speakers,id'],
             'createYearId' => ['nullable', 'integer', 'exists:years,id'],
             'createMonthId' => ['nullable', 'integer', 'exists:months,id'],
             'createWeekId' => ['nullable', 'integer', 'exists:weeks,id'],
@@ -294,7 +317,8 @@ new #[Title('Contenus audio')] class extends Component
         app(ContentService::class)->create($this->audioFile, [
             'title' => trim($this->createTitle),
             'description' => $this->createDescription !== '' ? trim($this->createDescription) : null,
-            'speaker' => $this->createSpeaker !== '' ? trim($this->createSpeaker) : null,
+            'speaker' => $this->createSpeakerId !== null ? null : ($this->createSpeaker !== '' ? trim($this->createSpeaker) : null),
+            'speaker_id' => $this->createSpeakerId,
             'year_id' => $this->createYearId,
             'month_id' => $this->createMonthId,
             'week_id' => $this->createWeekId,
@@ -305,7 +329,7 @@ new #[Title('Contenus audio')] class extends Component
             'approval_comment' => $this->createApprovalComment !== '' ? trim($this->createApprovalComment) : null,
         ], $this->imageFile);
 
-        $this->reset('audioFile', 'imageFile', 'createTitle', 'createDescription', 'createSpeaker', 'createYearId', 'createMonthId', 'createHasWeek', 'createWeekId', 'createActivityId', 'createDayOfWeek', 'createNotes', 'createApprovedBy', 'createApprovalComment');
+        $this->reset('audioFile', 'imageFile', 'createTitle', 'createDescription', 'createSpeaker', 'createSpeakerId', 'createYearId', 'createMonthId', 'createHasWeek', 'createWeekId', 'createActivityId', 'createDayOfWeek', 'createNotes', 'createApprovedBy', 'createApprovalComment');
         $this->createYearId = Year::query()->where('is_current', true)->value('id');
 
         Flux::toast(variant: 'success', text: __('Contenu créé.'));
@@ -321,6 +345,7 @@ new #[Title('Contenus audio')] class extends Component
         $this->editTitle = $content->title;
         $this->editDescription = $content->description ?? '';
         $this->editSpeaker = $content->speaker ?? '';
+        $this->editSpeakerId = $content->speaker_id;
         $this->editDuration = $content->duration_seconds;
         $this->editYearId = $content->year_id;
         $this->editMonthId = $content->month_id;
@@ -347,6 +372,7 @@ new #[Title('Contenus audio')] class extends Component
             'editTitle' => ['required', 'string', 'max:255'],
             'editDescription' => ['nullable', 'string', 'max:5000'],
             'editSpeaker' => ['nullable', 'string', 'max:255'],
+            'editSpeakerId' => ['nullable', 'integer', 'exists:speakers,id'],
             'editDuration' => ['nullable', 'integer', 'min:0'],
             'editYearId' => ['nullable', 'integer', 'exists:years,id'],
             'editMonthId' => ['nullable', 'integer', 'exists:months,id'],
@@ -372,7 +398,8 @@ new #[Title('Contenus audio')] class extends Component
         app(ContentService::class)->update($content, [
             'title' => trim($this->editTitle),
             'description' => $this->editDescription !== '' ? trim($this->editDescription) : null,
-            'speaker' => $this->editSpeaker !== '' ? trim($this->editSpeaker) : null,
+            'speaker' => $this->editSpeakerId !== null ? null : ($this->editSpeaker !== '' ? trim($this->editSpeaker) : null),
+            'speaker_id' => $this->editSpeakerId,
             'duration_seconds' => $this->editDuration,
             'year_id' => $this->editYearId,
             'month_id' => $this->editMonthId,
@@ -618,8 +645,13 @@ new #[Title('Contenus audio')] class extends Component
 
                 <flux:field class="lg:col-span-1">
                     <flux:label>{{ __('Conférencier') }}</flux:label>
-                    <flux:input wire:model="createSpeaker" />
-                    <flux:error name="createSpeaker" />
+                    <flux:select wire:model="createSpeakerId">
+                        <option value="">—</option>
+                        @foreach ($this->speakers as $speaker)
+                            <option value="{{ $speaker['id'] }}">{{ $speaker['label'] }}</option>
+                        @endforeach
+                    </flux:select>
+                    <flux:error name="createSpeakerId" />
                 </flux:field>
 
                 <flux:field>
@@ -752,7 +784,9 @@ new #[Title('Contenus audio')] class extends Component
                     <flux:table.row>
                         <flux:table.cell>
                             <div class="font-medium">{{ $content->title }}</div>
-                            @if ($content->speaker)
+                            @if ($content->speakerRel)
+                                <div class="text-sm text-zinc-400">{{ $content->speakerRel->label() }}</div>
+                            @elseif ($content->speaker)
                                 <div class="text-sm text-zinc-400">{{ $content->speaker }}</div>
                             @endif
                         </flux:table.cell>
@@ -816,8 +850,13 @@ new #[Title('Contenus audio')] class extends Component
 
                     <flux:field>
                         <flux:label>{{ __('Conférencier') }}</flux:label>
-                        <flux:input wire:model="editSpeaker" />
-                        <flux:error name="editSpeaker" />
+                        <flux:select wire:model="editSpeakerId">
+                            <option value="">—</option>
+                            @foreach ($this->speakers as $speaker)
+                                <option value="{{ $speaker['id'] }}">{{ $speaker['label'] }}</option>
+                            @endforeach
+                        </flux:select>
+                        <flux:error name="editSpeakerId" />
                     </flux:field>
 
                     <flux:field>

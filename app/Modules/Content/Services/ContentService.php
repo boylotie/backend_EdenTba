@@ -79,7 +79,7 @@ final class ContentService
      * (audio + visuel) et enregistrement sont supprimés (aucune donnée
      * partielle, A3).
      *
-     * @param  array{title: string, description?: string|null, duration_seconds?: int|null, speaker?: string|null, year_id?: int|null, month_id?: int|null, week_id?: int|null, special_activity_id?: int|null, day_of_week?: int|null, notes?: string|null, approved_by?: string|null, approval_comment?: string|null, approved_at?: string|null, scheduled_at?: string|null, sort_order?: int|null}  $data
+     * @param  array{title: string, description?: string|null, duration_seconds?: int|null, speaker?: string|null, speaker_id?: int|null, year_id?: int|null, month_id?: int|null, week_id?: int|null, special_activity_id?: int|null, day_of_week?: int|null, notes?: string|null, approved_by?: string|null, approval_comment?: string|null, approved_at?: string|null, scheduled_at?: string|null, sort_order?: int|null}  $data
      */
     public function create(UploadedFile $file, array $data, ?UploadedFile $image = null): Content
     {
@@ -94,6 +94,7 @@ final class ContentService
                 'description' => $data['description'] ?? null,
                 'duration_seconds' => $data['duration_seconds'] ?? null,
                 'speaker' => $data['speaker'] ?? null,
+                'speaker_id' => $data['speaker_id'] ?? null,
                 'year_id' => $data['year_id'] ?? null,
                 'month_id' => $data['month_id'] ?? null,
                 'week_id' => $data['week_id'] ?? null,
@@ -147,7 +148,7 @@ final class ContentService
      * Met à jour un contenu ; un nouveau fichier audio ou visuel remplace
      * l'existant (les anciens fichiers sont supprimés du stockage).
      *
-     * @param  array{title: string, description?: string|null, duration_seconds?: int|null, speaker?: string|null, year_id?: int|null, month_id?: int|null, week_id?: int|null, special_activity_id?: int|null, day_of_week?: int|null, notes?: string|null, approved_by?: string|null, approval_comment?: string|null, approved_at?: string|null, scheduled_at?: string|null, sort_order?: int|null}  $data
+     * @param  array{title: string, description?: string|null, duration_seconds?: int|null, speaker?: string|null, speaker_id?: int|null, year_id?: int|null, month_id?: int|null, week_id?: int|null, special_activity_id?: int|null, day_of_week?: int|null, notes?: string|null, approved_by?: string|null, approval_comment?: string|null, approved_at?: string|null, scheduled_at?: string|null, sort_order?: int|null}  $data
      */
     public function update(Content $content, array $data, ?UploadedFile $file = null, ?UploadedFile $image = null): Content
     {
@@ -175,6 +176,7 @@ final class ContentService
                 'description' => $data['description'] ?? null,
                 'duration_seconds' => $data['duration_seconds'] ?? null,
                 'speaker' => $data['speaker'] ?? null,
+                'speaker_id' => $data['speaker_id'] ?? null,
                 'year_id' => $data['year_id'] ?? null,
                 'month_id' => $data['month_id'] ?? null,
                 'week_id' => $data['week_id'] ?? null,

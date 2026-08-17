@@ -21,7 +21,9 @@ final class ContentPresenter
             'status' => $content->status,
             'description' => $content->description,
             'duration_seconds' => $content->duration_seconds,
-            'speaker' => $content->speaker,
+            'speaker' => $content->speakerRel !== null
+                ? ['id' => $content->speakerRel->id, 'name' => $content->speakerRel->name, 'title' => $content->speakerRel->title]
+                : $content->speaker,
             'mime_type' => $content->mime_type,
             'size_bytes' => $content->size_bytes,
             'image_url' => $content->image_path !== null ? '/api/v1/contents/'.$content->id.'/image' : null,

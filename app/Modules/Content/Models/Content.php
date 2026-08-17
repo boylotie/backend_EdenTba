@@ -5,6 +5,7 @@ namespace App\Modules\Content\Models;
 use App\Modules\Organization\Models\Month;
 use App\Modules\Organization\Models\Week;
 use App\Modules\Organization\Models\Year;
+use App\Modules\Speakers\Models\Speaker;
 use App\Modules\SpecialActivities\Models\SpecialActivity;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -23,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $duration_seconds
  * @property string|null $image_path
  * @property string|null $speaker
+ * @property int|null $speaker_id
  * @property int|null $year_id
  * @property int|null $month_id
  * @property int|null $week_id
@@ -49,6 +51,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'duration_seconds',
     'image_path',
     'speaker',
+    'speaker_id',
     'year_id',
     'month_id',
     'week_id',
@@ -149,6 +152,14 @@ class Content extends Model
     public static function allowedTransitions(string $status): array
     {
         return self::TRANSITIONS[$status] ?? [];
+    }
+
+    /**
+     * @return BelongsTo<Speaker, $this>
+     */
+    public function speakerRel(): BelongsTo
+    {
+        return $this->belongsTo(Speaker::class, 'speaker_id');
     }
 
     /**

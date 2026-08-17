@@ -37,6 +37,10 @@ class RbacSeeder extends Seeder
             'streaming.start',
             'streaming.stop',
             'statistics.view',
+            'speaker.view',
+            'speaker.create',
+            'speaker.update',
+            'speaker.delete',
         ];
 
         foreach ($permissions as $name) {
@@ -65,6 +69,10 @@ class RbacSeeder extends Seeder
                 'streaming.start',
                 'streaming.stop',
                 'statistics.view',
+                'speaker.view',
+                'speaker.create',
+                'speaker.update',
+                'speaker.delete',
             ])->pluck('id')->all(),
         );
 

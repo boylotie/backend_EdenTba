@@ -27,6 +27,7 @@ use App\Modules\Organization\Http\Controllers\WeekController;
 use App\Modules\Organization\Http\Controllers\YearController;
 use App\Modules\Playlists\Http\Controllers\PlaylistController;
 use App\Modules\Playlists\Http\Controllers\PublicPlaylistController;
+use App\Modules\Speakers\Http\Controllers\SpeakerController;
 use App\Modules\SpecialActivities\Http\Controllers\ActivityTypeController;
 use App\Modules\SpecialActivities\Http\Controllers\PublicSpecialActivityController;
 use App\Modules\SpecialActivities\Http\Controllers\SpecialActivityController;
@@ -56,6 +57,7 @@ Route::get('/', function () {
             'notifications' => '/api/v1/notifications',
             'streaming' => '/api/v1/live',
             'analytics' => '/api/v1/admin/statistics',
+            'speakers' => '/api/v1/speakers',
         ],
     ]);
 })->name('api.info');
@@ -253,4 +255,16 @@ Route::post('/listening-events', [ListeningEventController::class, 'store'])->na
 
 Route::middleware('auth:sanctum')->prefix('admin/statistics')->group(function (): void {
     Route::get('/', [StatisticsController::class, 'index'])->name('admin.statistics.index');
+});
+
+// Speakers (pasteurs / conférenciers)
+Route::prefix('speakers')->group(function (): void {
+    Route::get('/', [SpeakerController::class, 'index'])->name('speakers.public.index');
+    Route::get('/{speaker}', [SpeakerController::class, 'show'])->name('speakers.public.show');
+});
+
+Route::middleware('auth:sanctum')->prefix('speakers')->group(function (): void {
+    Route::post('/', [SpeakerController::class, 'store'])->name('speakers.store');
+    Route::put('/{speaker}', [SpeakerController::class, 'update'])->name('speakers.update');
+    Route::delete('/{speaker}', [SpeakerController::class, 'destroy'])->name('speakers.destroy');
 });

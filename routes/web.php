@@ -53,6 +53,10 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
         ->name('admin.special-activities.show')
         ->middleware('permission:special_activity.manage');
 
+    Route::livewire('admin/speakers', 'pages::admin.speakers')
+        ->name('admin.speakers.index')
+        ->middleware('permission:speaker.view');
+
     Route::livewire('admin/live', 'pages::admin.live')
         ->name('admin.live.index')
         ->middleware('permission:streaming.start');
