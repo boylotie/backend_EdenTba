@@ -139,7 +139,7 @@ new #[Title('Conférenciers')] class extends Component
     }
 }; ?>
 
-<section class="w-full">
+<section class="w-full" wire:poll.10s="refresh">
     <div>
         <flux:heading size="xl" level="1">{{ __('Conférenciers') }}</flux:heading>
         <flux:text class="mt-1">{{ __('Gestion des pasteurs et conférenciers.') }}</flux:text>

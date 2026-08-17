@@ -30,10 +30,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $week_id
  * @property int|null $special_activity_id
  * @property int|null $day_of_week
- * @property string|null $notes
- * @property string|null $approved_by
- * @property string|null $approval_comment
- * @property CarbonInterface|null $approved_at
  * @property CarbonInterface|null $scheduled_at
  * @property int $sort_order
  * @property array<string, mixed>|null $metadata
@@ -57,10 +53,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'week_id',
     'special_activity_id',
     'day_of_week',
-    'notes',
-    'approved_by',
-    'approval_comment',
-    'approved_at',
     'scheduled_at',
     'sort_order',
     'metadata',
@@ -115,7 +107,6 @@ class Content extends Model
             'scheduled_at' => 'datetime',
             'sort_order' => 'int',
             'day_of_week' => 'int',
-            'approved_at' => 'datetime',
             'metadata' => 'array',
         ];
     }

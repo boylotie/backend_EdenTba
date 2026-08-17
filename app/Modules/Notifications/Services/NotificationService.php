@@ -4,6 +4,7 @@ namespace App\Modules\Notifications\Services;
 
 use App\Models\User;
 use App\Modules\Content\Models\Content;
+use App\Modules\Notifications\Events\NotificationCreated;
 use App\Modules\Notifications\Models\Notification;
 use App\Modules\Notifications\Models\UserNotificationPreference;
 use Closure;
@@ -91,10 +92,16 @@ final class NotificationService
         ?string $entityType,
         ?int $entityId,
     ): Notification {
-        return Notification::firstOrCreate(
+        $notification = Notification::firstOrCreate(
             ['user_id' => $userId, 'type' => $type, 'entity_type' => $entityType, 'entity_id' => $entityId],
             ['title' => $title, 'body' => $body],
         );
+
+        if ($notification->wasRecentlyCreated) {
+            event(new NotificationCreated($notification));
+        }
+
+        return $notification;
     }
 
     /**
@@ -112,12 +119,14 @@ final class NotificationService
             ->where('is_active', true)
             ->whereDoesntHave('notificationPreferences', $this->disabledPreference($type))
             ->get() as $user) {
-            Notification::create([
+            $notification = Notification::create([
                 'user_id' => $user->id,
                 'type' => $type,
                 'title' => $title,
                 'body' => $body,
             ]);
+
+            event(new NotificationCreated($notification));
 
             $created++;
         }

@@ -62,7 +62,7 @@ it('refuse l accès sans permission content.view', function () {
     $this->actingAs($user)->get('/admin/contents')->assertForbidden();
 });
 
-it('affiche les mois avec leurs noms et l option semaine repliable', function () {
+it('affiche les mois avec leurs noms et le sélecteur de semaine', function () {
     $year = app(YearService::class)->create(['label' => '2026-2027']);
     $year->update(['is_current' => true]);
 
@@ -71,7 +71,7 @@ it('affiche les mois avec leurs noms et l option semaine repliable', function ()
         ->assertOk()
         ->assertSee('Janvier')
         ->assertSee('Décembre')
-        ->assertSee('Associer à une semaine');
+        ->assertSee('Semaine');
 });
 
 it('crée un contenu via le formulaire', function () {
@@ -90,25 +90,18 @@ it('crée un contenu via le formulaire', function () {
     ]);
 });
 
-it('crée un contenu avec jour, notes et compte-rendu d approbation', function () {
+it('crée un contenu avec jour de la semaine', function () {
     Livewire::actingAs(contentsPageAdmin())
         ->test('pages::admin.contents')
         ->set('audioFile', UploadedFile::fake()->create('predication.mp3', 100))
         ->set('createTitle', 'Prédication du dimanche')
         ->set('createDayOfWeek', 7)
-        ->set('createNotes', "Plan : la foi, l'espérance.")
-        ->set('createApprovedBy', 'Pasteur Jean')
-        ->set('createApprovalComment', 'Compte-rendu validé.')
         ->call('createContent')
         ->assertHasNoErrors();
 
     $content = Content::query()->where('title', 'Prédication du dimanche')->firstOrFail();
 
-    expect($content->day_of_week)->toBe(7)
-        ->and($content->notes)->toBe("Plan : la foi, l'espérance.")
-        ->and($content->approved_by)->toBe('Pasteur Jean')
-        ->and($content->approval_comment)->toBe('Compte-rendu validé.')
-        ->and($content->approved_at)->not->toBeNull();
+    expect($content->day_of_week)->toBe(7);
 });
 
 it('rejette un jour de semaine hors plage dans le formulaire', function () {
@@ -161,7 +154,7 @@ it('met à jour les métadonnées via le formulaire', function () {
     $this->assertDatabaseHas('contents', ['id' => $content->id, 'title' => 'Nouveau titre', 'speaker' => 'Frère Marc']);
 });
 
-it('met à jour le jour, les notes et l approbation via le formulaire', function () {
+it('met à jour le jour de la semaine via le formulaire', function () {
     $content = contentsPageRecord();
 
     Livewire::actingAs(contentsPageAdmin())
@@ -169,17 +162,12 @@ it('met à jour le jour, les notes et l approbation via le formulaire', function
         ->set('editId', $content->id)
         ->set('editTitle', 'Enseignement du jeudi')
         ->set('editDayOfWeek', 4)
-        ->set('editNotes', 'Notes du jeudi.')
-        ->set('editApprovedBy', 'Frère Marc')
         ->call('updateContent')
         ->assertHasNoErrors();
 
     $content->refresh();
 
-    expect($content->day_of_week)->toBe(4)
-        ->and($content->notes)->toBe('Notes du jeudi.')
-        ->and($content->approved_by)->toBe('Frère Marc')
-        ->and($content->approved_at)->not->toBeNull();
+    expect($content->day_of_week)->toBe(4);
 });
 
 it('publie un brouillon via la transition', function () {

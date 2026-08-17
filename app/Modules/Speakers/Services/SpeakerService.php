@@ -2,6 +2,9 @@
 
 namespace App\Modules\Speakers\Services;
 
+use App\Modules\Speakers\Events\SpeakerCreated;
+use App\Modules\Speakers\Events\SpeakerDeleted;
+use App\Modules\Speakers\Events\SpeakerUpdated;
 use App\Modules\Speakers\Models\Speaker;
 use App\Shared\Audit\AuditLogger;
 
@@ -21,6 +24,8 @@ final class SpeakerService
             entityId: $speaker->id,
         );
 
+        event(new SpeakerCreated($speaker));
+
         return $speaker;
     }
 
@@ -38,6 +43,8 @@ final class SpeakerService
             entityId: $speaker->id,
         );
 
+        event(new SpeakerUpdated($speaker));
+
         return $speaker;
     }
 
@@ -48,10 +55,13 @@ final class SpeakerService
         }
 
         $speakerId = $speaker->id;
+        $name = $speaker->name;
 
         $speaker->delete();
 
         AuditLogger::log('speakers.delete', entityType: 'speaker', entityId: $speakerId);
+
+        event(new SpeakerDeleted($speakerId, $name));
 
         return true;
     }

@@ -161,48 +161,19 @@ it('crée un contenu avec métadonnées et rattachement cohérent', function () 
     $this->assertDatabaseHas('audit_logs', ['action' => 'contents.create', 'entity_id' => $id]);
 });
 
-it('crée un contenu avec jour, notes de prédication et compte-rendu d approbation', function () {
+it('crée un contenu avec jour de la semaine', function () {
     $response = $this->withToken(crudToken(crudAdmin()))
         ->post('/api/v1/contents', [
             'title' => 'Prédication du dimanche',
             'file' => crudAudioFile(),
             'day_of_week' => 7,
-            'notes' => "Plan : la foi, l'espérance.",
-            'approved_by' => 'Pasteur Jean',
-            'approval_comment' => 'Compte-rendu validé.',
         ])
         ->assertCreated()
-        ->assertJsonPath('data.content.day_of_week', 7)
-        ->assertJsonPath('data.content.notes', "Plan : la foi, l'espérance.")
-        ->assertJsonMissingPath('data.content.approved_by')
-        ->assertJsonMissingPath('data.content.approval_comment');
+        ->assertJsonPath('data.content.day_of_week', 7);
 
-    $content = Content::findOrFail($response->json('data.content.id'));
+    $id = $response->json('data.content.id');
 
-    expect($content->approved_by)->toBe('Pasteur Jean')
-        ->and($content->approval_comment)->toBe('Compte-rendu validé.')
-        ->and($content->approved_at)->not->toBeNull();
-});
-
-it('efface le compte-rendu d approbation quand l approbateur est retiré', function () {
-    $content = crudContentRecord([
-        'approved_by' => 'Pasteur Jean',
-        'approval_comment' => 'Compte-rendu validé.',
-        'approved_at' => now(),
-    ]);
-
-    $this->withToken(crudToken(crudAdmin()))
-        ->putJson("/api/v1/contents/{$content->id}", [
-            'title' => 'Enseignement',
-            'approved_by' => '',
-        ])
-        ->assertOk();
-
-    $content->refresh();
-
-    expect($content->approved_by)->toBeNull()
-        ->and($content->approval_comment)->toBeNull()
-        ->and($content->approved_at)->toBeNull();
+    $this->assertDatabaseHas('contents', ['id' => $id, 'day_of_week' => 7]);
 });
 
 it('rejette un jour de semaine hors plage en 422', function () {
@@ -300,26 +271,20 @@ it('met à jour un contenu', function () {
     $this->assertDatabaseHas('audit_logs', ['action' => 'contents.update', 'entity_id' => $content->id]);
 });
 
-it('met à jour le jour, les notes et l approbation', function () {
+it('met à jour le jour de la semaine', function () {
     $content = crudContentRecord();
 
     $this->withToken(crudToken(crudAdmin()))
         ->putJson("/api/v1/contents/{$content->id}", [
             'title' => 'Enseignement du mardi',
             'day_of_week' => 2,
-            'notes' => 'Notes de l enseignement.',
-            'approved_by' => 'Sœur Marie',
         ])
         ->assertOk()
-        ->assertJsonPath('data.content.day_of_week', 2)
-        ->assertJsonPath('data.content.notes', 'Notes de l enseignement.');
+        ->assertJsonPath('data.content.day_of_week', 2);
 
     $content->refresh();
 
-    expect($content->day_of_week)->toBe(2)
-        ->and($content->notes)->toBe('Notes de l enseignement.')
-        ->and($content->approved_by)->toBe('Sœur Marie')
-        ->and($content->approved_at)->not->toBeNull();
+    expect($content->day_of_week)->toBe(2);
 });
 
 it('remplace le visuel lors de la mise à jour', function () {

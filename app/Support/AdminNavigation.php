@@ -47,6 +47,7 @@ final class AdminNavigation
             [
                 'heading' => __('Médias'),
                 'items' => [
+                    ['label' => __('Speakers'), 'icon' => 'microphone', 'route' => 'admin.speakers.index', 'permission' => 'speaker.view'],
                     ['label' => __('Contenus audio'), 'icon' => 'folder', 'route' => 'admin.contents.index', 'permission' => 'content.view'],
                     ['label' => __('Direct (live)'), 'icon' => 'radio', 'route' => 'admin.live.index', 'permission' => 'streaming.start'],
                 ],

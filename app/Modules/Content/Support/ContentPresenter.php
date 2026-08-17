@@ -30,7 +30,6 @@ final class ContentPresenter
             'scheduled_at' => $content->scheduled_at,
             'sort_order' => $content->sort_order,
             'day_of_week' => $content->day_of_week,
-            'notes' => $content->notes,
             'year' => $content->year !== null ? ['id' => $content->year->id, 'label' => $content->year->label] : null,
             'month' => $content->month !== null ? ['id' => $content->month->id, 'month_number' => $content->month->month_number] : null,
             'week' => $content->week !== null ? ['id' => $content->week->id, 'label' => $content->week->label] : null,

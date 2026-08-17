@@ -1,0 +1,13 @@
+192.168.11.114 {
+    tls internal
+
+    # Redirige les requêtes WebSockets Reverb
+    handle /app/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+
+    # Redirige le reste du trafic vers Laravel
+    handle {
+        reverse_proxy 127.0.0.1:8000
+    }
+}

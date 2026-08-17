@@ -213,8 +213,8 @@ new #[Title('Direct (live)')] class extends Component {
                     </flux:text>
 
                     <div class="mt-4 flex flex-wrap items-center gap-3">
-                        <flux:button id="mic-start" variant="primary">{{ __('Démarrer le micro') }}</flux:button>
-                        <flux:button id="mic-stop" variant="danger" disabled>{{ __('Arrêter le micro') }}</flux:button>
+                        <flux:button id="mic-start" variant="primary" onclick="window.__micCapture && window.__micCapture.start()">{{ __('Démarrer le micro') }}</flux:button>
+                        <flux:button id="mic-stop" variant="danger" disabled onclick="window.__micCapture && window.__micCapture.stop()">{{ __('Arrêter le micro') }}</flux:button>
                         <span id="mic-status" class="text-sm text-zinc-600 dark:text-zinc-300">{{ __('Micro arrêté') }}</span>
                     </div>
 
@@ -223,6 +223,131 @@ new #[Title('Direct (live)')] class extends Component {
                     <flux:text class="mt-2">
                         {{ __('Démarrez le relais sur le serveur pendant le direct : php artisan live:relay. Il pousse l\'audio vers le serveur de diffusion tant que le micro est actif.') }}
                     </flux:text>
+
+                    <script>
+                    (function () {
+                        if (window.__micCapture) return;
+
+                        var chunkUrl = @json(route('admin.live.stream.chunk'));
+                        var stopUrl  = @json(route('admin.live.stream.stop'));
+
+                        var recorder = null;
+                        var stream = null;
+                        var queue = Promise.resolve();
+                        var stopping = false;
+
+                        function csrf() {
+                            var meta = document.querySelector('meta[name="csrf-token"]');
+                            return meta ? meta.getAttribute('content') : '';
+                        }
+                        function byId(id) { return document.getElementById(id); }
+                        function setStatus(t) { var el = byId('mic-status'); if (el) el.textContent = t; }
+                        function setError(t) { var el = byId('mic-error'); if (el) el.textContent = t || ''; }
+                        function setRunning(r) {
+                            var s = byId('mic-start'), p = byId('mic-stop');
+                            if (s) s.disabled = r;
+                            if (p) p.disabled = !r;
+                        }
+                        function stopTracks() {
+                            if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+                        }
+                        function pickMimeType() {
+                            if (typeof MediaRecorder === 'undefined') return 'audio/webm';
+                            var types = ['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/webm','audio/mp4'];
+                            for (var i = 0; i < types.length; i++) { if (MediaRecorder.isTypeSupported(types[i])) return types[i]; }
+                            return 'audio/webm';
+                        }
+                        function enqueueChunk(blob) {
+                            queue = queue.then(function () { return sendChunk(blob); }).catch(function () {});
+                        }
+                        function sendChunk(blob) {
+                            if (blob.size === 0) return Promise.resolve();
+                            return fetch(chunkUrl, {
+                                method: 'POST',
+                                headers: { 'X-CSRF-TOKEN': csrf(), 'Content-Type': blob.type || 'audio/webm', 'Accept': 'application/json' },
+                                body: blob,
+                            }).then(function (response) {
+                                if (response.status === 409) {
+                                    setError('Direct terminé : l\'envoi de la capture a été arrêté.');
+                                    return window.__micCapture.stop();
+                                } else if (response.status === 422) {
+                                    return response.json().then(function (body) {
+                                        setError((body && body.message) ? body.message : 'Chunk refusé par le serveur.');
+                                        return window.__micCapture.stop();
+                                    });
+                                }
+                            });
+                        }
+
+                        window.__micCapture = {
+                            start: function () {
+                                if (recorder || stopping) return;
+
+                                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                                    setError('Le micro exige une connexion sécurisée (HTTPS) ou localhost.');
+                                    return;
+                                }
+
+                                navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) {
+                                    stream = s;
+                                    var mimeType = pickMimeType();
+                                    var options = { audioBitsPerSecond: 128000 };
+                                    if (mimeType) options.mimeType = mimeType;
+
+                                    try {
+                                        recorder = new MediaRecorder(stream, options);
+                                    } catch (e) {
+                                        stopTracks();
+                                        setError('Enregistrement audio non supporté par ce navigateur.');
+                                        return;
+                                    }
+
+                                    recorder.ondataavailable = function (event) { enqueueChunk(event.data); };
+                                    recorder.onstop = stopTracks;
+                                    recorder.start(1000);
+
+                                    setRunning(true);
+                                    setStatus('Micro actif — diffusion en cours');
+                                    setError('');
+                                }).catch(function (error) {
+                                    if (error && error.name === 'NotAllowedError') {
+                                        setError('Accès au micro refusé : autorisez le micro dans le navigateur puis réessayez.');
+                                    } else if (error && (error.name === 'NotFoundError' || error.name === 'OverconstrainedError')) {
+                                        setError('Aucun microphone détecté sur cet appareil.');
+                                    } else if (error && error.name === 'NotReadableError') {
+                                        setError('Micro déjà utilisé par une autre application.');
+                                    } else {
+                                        setError('Accès au micro impossible (' + (error?.name || 'inconnu') + ').');
+                                    }
+                                });
+                            },
+                            stop: function () {
+                                if (stopping) return Promise.resolve();
+                                stopping = true;
+
+                                if (recorder && recorder.state !== 'inactive') {
+                                    recorder.stop();
+                                }
+                                stopTracks();
+                                setRunning(false);
+                                setStatus('Micro arrêté');
+
+                                return fetch(stopUrl, {
+                                    method: 'POST',
+                                    headers: { 'X-CSRF-TOKEN': csrf(), 'Accept': 'application/json' },
+                                }).catch(function () {}).then(function () {
+                                    recorder = null;
+                                    stopping = false;
+                                });
+                            },
+                        };
+
+                        window.addEventListener('beforeunload', function () {
+                            if (recorder && recorder.state !== 'inactive') recorder.stop();
+                            stopTracks();
+                        });
+                    })();
+                    </script>
                 </flux:card>
 
                 <div class="flex items-center gap-3">
@@ -312,190 +437,4 @@ new #[Title('Direct (live)')] class extends Component {
     </flux:card>
 </section>
 
-@script
-<script>
-    (() => {
-        const chunkUrl = @json(route('admin.live.stream.chunk'));
-        const stopUrl = @json(route('admin.live.stream.stop'));
 
-        let recorder = null;
-        let stream = null;
-        let queue = Promise.resolve();
-        let stopping = false;
-
-        const csrf = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
-        const byId = (id) => document.getElementById(id);
-
-        const setStatus = (text) => {
-            const el = byId('mic-status');
-            if (el) el.textContent = text;
-        };
-
-        const setError = (text) => {
-            const el = byId('mic-error');
-            if (el) el.textContent = text ?? '';
-        };
-
-        const setRunning = (running) => {
-            const start = byId('mic-start');
-            const stop = byId('mic-stop');
-            if (start) start.disabled = running;
-            if (stop) stop.disabled = ! running;
-        };
-
-        const stopTracks = () => {
-            if (stream) {
-                stream.getTracks().forEach((track) => track.stop());
-                stream = null;
-            }
-        };
-
-        const pickMimeType = () => {
-            if (typeof MediaRecorder === 'undefined' || ! MediaRecorder.isTypeSupported) return 'audio/webm';
-
-            return [
-                'audio/webm;codecs=opus',
-                'audio/ogg;codecs=opus',
-                'audio/webm',
-                'audio/mp4',
-            ].find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? 'audio/webm';
-        };
-
-        const enqueueChunk = (blob) => {
-            queue = queue.then(() => sendChunk(blob)).catch(() => {});
-        };
-
-        async function sendChunk(blob) {
-            if (blob.size === 0) return;
-
-            const response = await fetch(chunkUrl, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrf(),
-                    'Content-Type': blob.type || 'audio/webm',
-                    'Accept': 'application/json',
-                },
-                body: blob,
-            });
-
-            if (response.status === 409) {
-                setError('Direct terminé : l’envoi de la capture a été arrêté.');
-                await stopCapture();
-            } else if (response.status === 422) {
-                let message = 'Chunk refusé par le serveur.';
-                try {
-                    const body = await response.json();
-                    if (body && body.message) message = body.message;
-                } catch (e) {}
-                setError(message);
-                await stopCapture();
-            }
-        }
-
-        async function startCapture() {
-            if (recorder || stopping) return;
-
-            if (! navigator.mediaDevices || ! navigator.mediaDevices.getUserMedia) {
-                setError('Le micro exige une connexion sécurisée (HTTPS) ou localhost.');
-                return;
-            }
-
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            } catch (error) {
-                if (error && error.name === 'NotAllowedError') {
-                    setError('Accès au micro refusé : autorisez le micro dans le navigateur (icône verrou) puis réessayez.');
-                } else if (error && (error.name === 'NotFoundError' || error.name === 'OverconstrainedError')) {
-                    setError('Aucun microphone détecté sur cet appareil.');
-                } else if (error && (error.name === 'NotReadableError')) {
-                    setError('Micro déjà utilisé par une autre application.');
-                } else {
-                    setError('Accès au micro impossible ('.String(error?.name ?? 'inconnu').').');
-                }
-                return;
-            }
-
-            let mimeType;
-            try {
-                mimeType = pickMimeType();
-            } catch (error) {
-                stopTracks();
-                setError('Enregistrement audio non supporté par ce navigateur.');
-                return;
-            }
-
-            const options = { audioBitsPerSecond: 128000 };
-            if (mimeType) options.mimeType = mimeType;
-
-            try {
-                recorder = new MediaRecorder(stream, options);
-            } catch (error) {
-                stopTracks();
-                setError('Enregistrement audio non supporté par ce navigateur.');
-                return;
-            }
-
-            recorder.ondataavailable = (event) => enqueueChunk(event.data);
-            recorder.onstop = stopTracks;
-            recorder.start(1000);
-
-            setRunning(true);
-            setStatus('Micro actif — diffusion en cours');
-            setError('');
-        }
-
-        async function stopCapture() {
-            if (stopping) return;
-            stopping = true;
-
-            if (recorder && recorder.state !== 'inactive') {
-                recorder.stop();
-            }
-            stopTracks();
-            setRunning(false);
-            setStatus('Micro arrêté');
-
-            try {
-                await fetch(stopUrl, {
-                    method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': csrf(), 'Accept': 'application/json' },
-                });
-            } catch (error) {
-                // Réseau indisponible : l'état est réconcilié au prochain poll.
-            }
-
-            if (typeof $wire !== 'undefined' && $wire.$refresh) {
-                $wire.$refresh();
-            }
-
-            recorder = null;
-            stopping = false;
-        }
-
-        document.addEventListener('click', (event) => {
-            if (event.target.closest('#mic-start')) {
-                event.preventDefault();
-                startCapture();
-            }
-
-            if (event.target.closest('#mic-stop')) {
-                event.preventDefault();
-                stopCapture();
-            }
-        });
-
-        setInterval(() => {
-            if (! byId('mic-start') && (recorder || stopping)) {
-                stopCapture();
-            }
-        }, 2000);
-
-        window.addEventListener('beforeunload', () => {
-            if (recorder && recorder.state !== 'inactive') {
-                recorder.stop();
-            }
-            stopTracks();
-        });
-    })();
-</script>
-@endscript

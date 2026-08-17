@@ -2,7 +2,10 @@
 
 namespace App\Modules\Content\Services;
 
+use App\Modules\Content\Events\ContentCreated;
+use App\Modules\Content\Events\ContentDeleted;
 use App\Modules\Content\Events\ContentStatusChanged;
+use App\Modules\Content\Events\ContentUpdated;
 use App\Modules\Content\Exceptions\InvalidContentTransitionException;
 use App\Modules\Content\Jobs\ExtractAudioMetadata;
 use App\Modules\Content\Models\Content;
@@ -79,13 +82,12 @@ final class ContentService
      * (audio + visuel) et enregistrement sont supprimés (aucune donnée
      * partielle, A3).
      *
-     * @param  array{title: string, description?: string|null, duration_seconds?: int|null, speaker?: string|null, speaker_id?: int|null, year_id?: int|null, month_id?: int|null, week_id?: int|null, special_activity_id?: int|null, day_of_week?: int|null, notes?: string|null, approved_by?: string|null, approval_comment?: string|null, approved_at?: string|null, scheduled_at?: string|null, sort_order?: int|null}  $data
+     * @param  array{title: string, description?: string|null, duration_seconds?: int|null, speaker?: string|null, speaker_id?: int|null, year_id?: int|null, month_id?: int|null, week_id?: int|null, special_activity_id?: int|null, day_of_week?: int|null, scheduled_at?: string|null, sort_order?: int|null}  $data
      */
     public function create(UploadedFile $file, array $data, ?UploadedFile $image = null): Content
     {
         $filePath = $this->storage->store($file);
         $imagePath = $image !== null ? $this->images->store($image) : null;
-        $approval = $this->normalizedApproval($data);
         $content = null;
 
         try {
@@ -100,10 +102,6 @@ final class ContentService
                 'week_id' => $data['week_id'] ?? null,
                 'special_activity_id' => $data['special_activity_id'] ?? null,
                 'day_of_week' => $data['day_of_week'] ?? null,
-                'notes' => isset($data['notes']) && trim((string) $data['notes']) !== '' ? trim((string) $data['notes']) : null,
-                'approved_by' => $approval['approved_by'],
-                'approval_comment' => $approval['approval_comment'],
-                'approved_at' => $approval['approved_at'],
                 'scheduled_at' => $data['scheduled_at'] ?? null,
                 'sort_order' => $data['sort_order'] ?? 0,
                 'file_path' => $filePath,
@@ -141,6 +139,8 @@ final class ContentService
 
         Cache::increment(self::PUBLIC_CACHE_VERSION_KEY);
 
+        event(new ContentCreated($content));
+
         return $content;
     }
 
@@ -148,7 +148,7 @@ final class ContentService
      * Met à jour un contenu ; un nouveau fichier audio ou visuel remplace
      * l'existant (les anciens fichiers sont supprimés du stockage).
      *
-     * @param  array{title: string, description?: string|null, duration_seconds?: int|null, speaker?: string|null, speaker_id?: int|null, year_id?: int|null, month_id?: int|null, week_id?: int|null, special_activity_id?: int|null, day_of_week?: int|null, notes?: string|null, approved_by?: string|null, approval_comment?: string|null, approved_at?: string|null, scheduled_at?: string|null, sort_order?: int|null}  $data
+     * @param  array{title: string, description?: string|null, duration_seconds?: int|null, speaker?: string|null, speaker_id?: int|null, year_id?: int|null, month_id?: int|null, week_id?: int|null, special_activity_id?: int|null, day_of_week?: int|null, scheduled_at?: string|null, sort_order?: int|null}  $data
      */
     public function update(Content $content, array $data, ?UploadedFile $file = null, ?UploadedFile $image = null): Content
     {
@@ -168,8 +168,6 @@ final class ContentService
             $content->image_path = $this->images->store($image);
         }
 
-        $approval = $this->normalizedApproval($data, $content->approved_at);
-
         try {
             $content->fill([
                 'title' => $data['title'],
@@ -182,10 +180,6 @@ final class ContentService
                 'week_id' => $data['week_id'] ?? null,
                 'special_activity_id' => $data['special_activity_id'] ?? null,
                 'day_of_week' => $data['day_of_week'] ?? null,
-                'notes' => isset($data['notes']) && trim((string) $data['notes']) !== '' ? trim((string) $data['notes']) : null,
-                'approved_by' => $approval['approved_by'],
-                'approval_comment' => $approval['approval_comment'],
-                'approved_at' => $approval['approved_at'],
                 'scheduled_at' => $data['scheduled_at'] ?? null,
                 'sort_order' => $data['sort_order'] ?? 0,
             ])->save();
@@ -224,6 +218,8 @@ final class ContentService
 
         Cache::increment(self::PUBLIC_CACHE_VERSION_KEY);
 
+        event(new ContentUpdated($content));
+
         return $content;
     }
 
@@ -232,11 +228,14 @@ final class ContentService
      */
     public function delete(Content $content): void
     {
+        $contentId = $content->id;
+        $title = $content->title;
+
         AuditLogger::log(
             'contents.delete',
-            ['title' => $content->title],
+            ['title' => $title],
             entityType: 'content',
-            entityId: $content->id,
+            entityId: $contentId,
         );
 
         $content->delete();
@@ -248,6 +247,8 @@ final class ContentService
         }
 
         Cache::increment(self::PUBLIC_CACHE_VERSION_KEY);
+
+        event(new ContentDeleted($contentId, $title));
     }
 
     /**
@@ -296,34 +297,5 @@ final class ContentService
         $title = pathinfo($filename, PATHINFO_FILENAME);
 
         return trim($title) === '' ? $filename : $title;
-    }
-
-    /**
-     * Normalise le compte-rendu d'approbation : sans approbateur, le compte-rendu
-     * et la date sont vidés ; avec un approbateur et sans date, la date courante
-     * est posée (une date déjà présente est conservée lors d'une mise à jour).
-     *
-     * @param  array<string, mixed>  $data
-     * @return array{approved_by: string|null, approval_comment: string|null, approved_at: CarbonInterface|null}
-     */
-    private function normalizedApproval(array $data, ?CarbonInterface $existingApprovedAt = null): array
-    {
-        $approvedBy = isset($data['approved_by']) ? trim((string) $data['approved_by']) : '';
-
-        if ($approvedBy === '') {
-            return [
-                'approved_by' => null,
-                'approval_comment' => null,
-                'approved_at' => null,
-            ];
-        }
-
-        $comment = isset($data['approval_comment']) ? trim((string) $data['approval_comment']) : '';
-
-        return [
-            'approved_by' => $approvedBy,
-            'approval_comment' => $comment !== '' ? $comment : null,
-            'approved_at' => $existingApprovedAt ?? now(),
-        ];
     }
 }
