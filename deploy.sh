@@ -37,7 +37,12 @@ apt update && apt upgrade -y
 echo ""
 echo "[2/10] Installation de PHP 8.3, MySQL, Apache..."
 apt install -y software-properties-common
-add-apt-repository -y ppa:ondrej/php
+
+# Ajouter le repo Sury PHP (compatible Ubuntu Resolute)
+if ! grep -q "packages.sury.org/php" /etc/apt/sources.list.d/*.list 2>/dev/null; then
+    echo "Ajout du repo Sury PHP..."
+    curl -sSL https://packages.sury.org/php/README.txt | bash
+fi
 apt update
 
 apt install -y \
