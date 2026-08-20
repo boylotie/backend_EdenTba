@@ -15,12 +15,12 @@ set -e
 # --- Configuration -----------------------------------------------------------
 VPS_IP="100.125.195.64"
 PORT="8083"
-REPO_URL="https://github.com/TON_USER/edentba.git"
+REPO_URL="https://github.com/boylotie/backend_EdenTba.git"
 CLONE_DIR="/var/www/edentba"
 DEPLOY_DIR="/var/www/edentba/backend"
 DB_NAME="edentba_db"
 DB_USER="edentba_user"
-DB_PASS="CHANGE_ME_STRONG_PASSWORD"
+DB_PASS="edentba_db123@!"
 # ============================================================================
 
 echo "=========================================="
