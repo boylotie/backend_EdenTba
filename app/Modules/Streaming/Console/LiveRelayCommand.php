@@ -33,8 +33,24 @@ final class LiveRelayCommand extends Command
     {
         $interval = (float) $this->option('interval');
 
+        $this->info('Relais micro → Icecast démarré. Ctrl+C pour arrêter.');
+
+        $live = app(\App\Modules\Streaming\Services\LiveService::class);
+        $buffer = app(\App\Modules\Streaming\Support\LiveChunkBuffer::class);
+
+        $current = $live->current();
+        $isLive = $current !== null && $current->isLive();
+        $micActive = $buffer->isMicActive();
+        $chunks = $buffer->hasChunks();
+
+        $this->info("État initial — Live: " . ($isLive ? 'oui' : 'non') . " | Micro: " . ($micActive ? 'actif' : 'inactif') . " | Chunks: " . ($chunks ? 'oui' : 'non'));
+
         do {
-            $this->relay->processOnce();
+            try {
+                $this->relay->processOnce();
+            } catch (\Throwable $e) {
+                $this->error('Erreur relais : ' . $e->getMessage());
+            }
 
             if ($this->option('once')) {
                 break;

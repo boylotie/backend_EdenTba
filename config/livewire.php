@@ -211,6 +211,28 @@ return [
     'inject_morph_markers' => true,
 
     /*
+    |--------------------------------------------------------------------------
+    | Error Handling
+    |--------------------------------------------------------------------------
+    |
+    | Configuration pour la gestion des erreurs de polling
+    |
+    */
+
+    'on_error' => function ($exception, $component) {
+        // Log silencieux des erreurs de polling pour éviter spam console
+        if (str_contains($exception->getMessage(), 'poll')) {
+            return;
+        }
+
+        // Log standard pour les autres erreurs
+        logger()->error('Livewire error', [
+            'exception' => $exception->getMessage(),
+            'component' => get_class($component),
+        ]);
+    },
+
+    /*
     |---------------------------------------------------------------------------
     | Smart Wire Keys
     |---------------------------------------------------------------------------

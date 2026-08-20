@@ -28,7 +28,11 @@ final class NotificationService
 
     public const TYPE_INACTIVITY_REMINDER = 'inactivity_reminder';
 
+    public const TYPE_LIVE_STARTED = 'live_started';
+
     public const ENTITY_CONTENT = 'content';
+
+    public const ENTITY_LIVE_SESSION = 'live_session';
 
     /**
      * Types de notification connus (MOD-09-P4) : une préférence est définie
@@ -43,6 +47,7 @@ final class NotificationService
             self::TYPE_ADMIN_MESSAGE,
             self::TYPE_PROGRAM_REMINDER,
             self::TYPE_INACTIVITY_REMINDER,
+            self::TYPE_LIVE_STARTED,
         ];
     }
 
@@ -180,5 +185,33 @@ final class NotificationService
         return function (Builder $query) use ($type): void {
             $query->where('type', $type)->where('enabled', false);
         };
+    }
+
+    /**
+     * Crée une notification « live démarré » pour chaque utilisateur actif
+     * qui n'a pas désactivé le type `live_started`.
+     */
+    public function createForLiveStarted(int $sessionId, ?string $title): int
+    {
+        $created = 0;
+        $label = $title !== null ? $title : 'Direct';
+
+        foreach (User::query()
+            ->where('is_active', true)
+            ->whereDoesntHave('notificationPreferences', $this->disabledPreference(self::TYPE_LIVE_STARTED))
+            ->get() as $user) {
+            $notification = $this->createUnique(
+                $user->id,
+                self::TYPE_LIVE_STARTED,
+                __('Le direct a commencé'),
+                $label !== 'Direct' ? $label : null,
+                self::ENTITY_LIVE_SESSION,
+                $sessionId,
+            );
+
+            $created += $notification->wasRecentlyCreated ? 1 : 0;
+        }
+
+        return $created;
     }
 }
