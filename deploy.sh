@@ -2,6 +2,12 @@
 # ============================================================================
 # Script de deploiement — EdenTba API (Laravel)
 # VPS: 100.125.195.64 | Port: 8083
+#
+# Utilisation :
+#   1. git clone https://github.com/TON_USER/edentba.git /var/www/edentba
+#   2. cd /var/www/edentba/backend
+#   3. chmod +x deploy.sh
+#   4. sudo ./deploy.sh
 # ============================================================================
 
 set -e
@@ -9,12 +15,12 @@ set -e
 # --- Configuration -----------------------------------------------------------
 VPS_IP="100.125.195.64"
 PORT="8083"
-REPO_URL="https://github.com/TON_USER/edentba-backend.git"
-DEPLOY_DIR="/var/www/edentba"
+REPO_URL="https://github.com/TON_USER/edentba.git"
+CLONE_DIR="/var/www/edentba"
+DEPLOY_DIR="/var/www/edentba/backend"
 DB_NAME="edentba_db"
 DB_USER="edentba_user"
 DB_PASS="CHANGE_ME_STRONG_PASSWORD"
-APP_KEY=$(openssl rand -base64 32)
 # ============================================================================
 
 echo "=========================================="
@@ -65,17 +71,19 @@ FLUSH PRIVILEGES;
 EOF
 echo "Base de donnees ${DB_NAME} prete."
 
-# --- 5. Clonage du depot ----------------------------------------------------
+# --- 5. Verification du depot ------------------------------------------------
 echo ""
-echo "[5/10] Clonage du depot..."
-if [ -d "$DEPLOY_DIR" ]; then
-    echo "Le dossier $DEPLOY_DIR existe deja. Pull en cours..."
-    cd "$DEPLOY_DIR"
+echo "[5/10] Verification du depot..."
+if [ -d "$CLONE_DIR/.git" ]; then
+    echo "Depot existant a $CLONE_DIR. Pull en cours..."
+    cd "$CLONE_DIR"
     git pull origin main
 else
-    git clone "$REPO_URL" "$DEPLOY_DIR"
-    cd "$DEPLOY_DIR"
+    echo "Clonage du depot..."
+    git clone "$REPO_URL" "$CLONE_DIR"
+    cd "$CLONE_DIR"
 fi
+cd "$DEPLOY_DIR"
 
 # --- 6. Installation des dependances PHP -------------------------------------
 echo ""
@@ -89,15 +97,15 @@ if [ ! -f .env ]; then
     cp .env.example .env
 fi
 
-sed -i "s|APP_ENV=local|APP_ENV=production|" .env
-sed -i "s|APP_DEBUG=true|APP_DEBUG=false|" .env
+sed -i "s|APP_ENV=.*|APP_ENV=production|" .env
+sed -i "s|APP_DEBUG=.*|APP_DEBUG=false|" .env
 sed -i "s|APP_URL=.*|APP_URL=http://${VPS_IP}:${PORT}|" .env
 sed -i "s|DB_CONNECTION=.*|DB_CONNECTION=mysql|" .env
-sed -i "s|# DB_HOST=.*|DB_HOST=127.0.0.1|" .env
-sed -i "s|# DB_PORT=.*|DB_PORT=3306|" .env
-sed -i "s|# DB_DATABASE=.*|DB_DATABASE=${DB_NAME}|" .env
-sed -i "s|# DB_USERNAME=.*|DB_USERNAME=${DB_USER}|" .env
-sed -i "s|# DB_PASSWORD=.*|DB_PASSWORD=${DB_PASS}|" .env
+sed -i "s|#* *DB_HOST=.*|DB_HOST=127.0.0.1|" .env
+sed -i "s|#* *DB_PORT=.*|DB_PORT=3306|" .env
+sed -i "s|#* *DB_DATABASE=.*|DB_DATABASE=${DB_NAME}|" .env
+sed -i "s|#* *DB_USERNAME=.*|DB_USERNAME=${DB_USER}|" .env
+sed -i "s|#* *DB_PASSWORD=.*|DB_PASSWORD=${DB_PASS}|" .env
 sed -i "s|BROADCAST_CONNECTION=.*|BROADCAST_CONNECTION=log|" .env
 sed -i "s|SESSION_DRIVER=.*|SESSION_DRIVER=database|" .env
 sed -i "s|CACHE_STORE=.*|CACHE_STORE=database|" .env
@@ -125,7 +133,6 @@ chmod -R 775 "$DEPLOY_DIR/storage" "$DEPLOY_DIR/bootstrap/cache"
 echo ""
 echo "[10/10] Configuration d'Apache sur le port ${PORT}..."
 
-# Creer la configuration du vhost
 cat > /etc/apache2/sites-available/edentba.conf <<EOF
 <VirtualHost *:${PORT}>
     ServerName ${VPS_IP}
@@ -141,7 +148,6 @@ cat > /etc/apache2/sites-available/edentba.conf <<EOF
 </VirtualHost>
 EOF
 
-# Ajouter le port dans apache2.conf si absent
 if ! grep -q "Listen ${PORT}" /etc/apache2/ports.conf; then
     echo "Listen ${PORT}" >> /etc/apache2/ports.conf
 fi
@@ -175,6 +181,4 @@ echo "  MDP:     ${DB_PASS}"
 echo ""
 echo "  IMPORTANT :"
 echo "  - Change DB_PASS dans ${DEPLOY_DIR}/.env"
-echo "  - Change APP_KEY si necessaire"
-echo "  - Configure ton nom de domaine"
 echo "=========================================="
