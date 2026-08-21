@@ -18,26 +18,15 @@ return new class extends Migration
             if (Schema::hasIndex('programs', 'programs_week_id_day_of_week_start_time_index')) {
                 $table->dropIndex('programs_week_id_day_of_week_start_time_index');
             }
-        });
-
-        if (Schema::hasIndex('programs', 'programs_week_id_day_of_week_index')) {
-            $fkName = DB::selectOne(
-                "SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
-                 WHERE TABLE_NAME = 'program_reminders'
-                 AND REFERENCED_TABLE_NAME = 'programs'
-                 AND REFERENCED_COLUMN_NAME = 'id'
-                 LIMIT 1"
-            );
-            if ($fkName) {
-                DB::statement("ALTER TABLE program_reminders DROP FOREIGN KEY `{$fkName->CONSTRAINT_NAME}`");
+            if (Schema::hasIndex('programs', 'programs_week_id_day_of_week_index')) {
+                try {
+                    $table->dropIndex('programs_week_id_day_of_week_index');
+                } catch (\Exception $e) {
+                    DB::statement('SET FOREIGN_KEY_CHECKS=0');
+                    DB::statement('ALTER TABLE programs DROP INDEX programs_week_id_day_of_week_index');
+                    DB::statement('SET FOREIGN_KEY_CHECKS=1');
+                }
             }
-            DB::statement('ALTER TABLE programs DROP INDEX programs_week_id_day_of_week_index');
-            if ($fkName) {
-                DB::statement("ALTER TABLE program_reminders ADD CONSTRAINT `{$fkName->CONSTRAINT_NAME}` FOREIGN KEY (program_id) REFERENCES programs (id) ON DELETE CASCADE");
-            }
-        }
-
-        Schema::table('programs', function (Blueprint $table): void {
             $table->index(['week_id', 'day_of_week', 'start_time'], 'programs_week_day_time_idx');
         });
 
