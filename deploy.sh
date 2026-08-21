@@ -280,21 +280,6 @@ server {
     index index.php index.html;
     charset utf-8;
 
-    add_header Access-Control-Allow-Origin "*" always;
-    add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
-    add_header Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, X-XSRF-TOKEN" always;
-    add_header Access-Control-Allow-Credentials "true" always;
-
-    if (\$request_method = OPTIONS) {
-        add_header Access-Control-Allow-Origin "*";
-        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
-        add_header Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, X-XSRF-TOKEN";
-        add_header Access-Control-Allow-Credentials "true";
-        add_header Access-Control-Max-Age 86400;
-        add_header Content-Length 0;
-        return 204;
-    }
-
     location / {
         try_files \$uri \$uri/ /index.php?\$query_string;
     }
@@ -308,6 +293,11 @@ server {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:/run/php/php8.3-fpm.sock;
         fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
+
+        add_header Access-Control-Allow-Origin "*" always;
+        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, X-XSRF-TOKEN" always;
+        add_header Access-Control-Allow-Credentials "true" always;
     }
 
     location ~ /\.(?!well-known).* {
