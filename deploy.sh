@@ -4,8 +4,8 @@
 # VPS: 100.125.195.64 | Port: 8083
 #
 # Utilisation :
-#   1. git clone https://github.com/TON_USER/edentba.git /var/www/edentba
-#   2. cd /var/www/edentba/backend
+#   1. git clone https://github.com/boylotie/backend_EdenTba.git /var/www/edentba
+#   2. cd /var/www/edentba
 #   3. chmod +x deploy.sh
 #   4. sudo ./deploy.sh
 # ============================================================================
@@ -16,8 +16,7 @@ set -e
 VPS_IP="100.125.195.64"
 PORT="8083"
 REPO_URL="https://github.com/boylotie/backend_EdenTba.git"
-CLONE_DIR="/var/www/edentba"
-DEPLOY_DIR="/var/www/edentba/"
+DEPLOY_DIR="/var/www/edentba"
 DB_NAME="edentba_db"
 DB_USER="edentba_user"
 DB_PASS="edentba_db123@!"
@@ -31,21 +30,18 @@ echo "=========================================="
 # --- 1. Mise a jour du systeme -----------------------------------------------
 echo ""
 echo "[1/10] Mise a jour du systeme..."
+apt update && apt upgrade -y
+
+# --- 2. Installation des dependances systeme ---------------------------------
+echo ""
+echo "[2/10] Installation de PHP 8.3, MySQL, Nginx..."
 
 # Supprimer le PPA ondrej/php s'il est present (incompatible Resolute)
 add-apt-repository --remove ppa:ondrej/php -y 2>/dev/null || true
 rm -f /etc/apt/sources.list.d/ondrej-ubuntu-php-*.list 2>/dev/null || true
 
-apt update && apt upgrade -y
-
-# --- 2. Installation des dependances systeme ---------------------------------
-echo ""
-echo "[2/10] Installation de PHP 8.3, MySQL, Apache..."
-apt install -y software-properties-common
-
-# Ajouter le repo Sury PHP (compatible Ubuntu Resolute) si absent
+# Ajouter le repo Sury PHP si absent
 if ! grep -q "packages.sury.org/php" /etc/apt/sources.list.d/*.list 2>/dev/null; then
-    echo "Ajout du repo Sury PHP..."
     curl -sSL https://packages.sury.org/php/README.txt | bash
 fi
 apt update
@@ -55,7 +51,7 @@ apt install -y \
     php8.3-mbstring php8.3-xml php8.3-zip php8.3-gd \
     php8.3-bcmath php8.3-intl php8.3-readline php8.3-opcache \
     mysql-server mysql-client \
-    apache2 libapache2-mod-php8.3 \
+    nginx \
     git unzip curl
 
 # --- 3. Installation de Composer ---------------------------------------------
@@ -84,16 +80,15 @@ echo "Base de donnees ${DB_NAME} prete."
 # --- 5. Verification du depot ------------------------------------------------
 echo ""
 echo "[5/10] Verification du depot..."
-if [ -d "$CLONE_DIR/.git" ]; then
-    echo "Depot existant a $CLONE_DIR. Pull en cours..."
-    cd "$CLONE_DIR"
+if [ -d "$DEPLOY_DIR/.git" ]; then
+    echo "Depot existant a $DEPLOY_DIR. Pull en cours..."
+    cd "$DEPLOY_DIR"
     git pull origin main
 else
     echo "Clonage du depot..."
-    git clone "$REPO_URL" "$CLONE_DIR"
-    cd "$CLONE_DIR"
+    git clone "$REPO_URL" "$DEPLOY_DIR"
+    cd "$DEPLOY_DIR"
 fi
-cd "$DEPLOY_DIR"
 
 # --- 6. Installation des dependances PHP -------------------------------------
 echo ""
@@ -146,35 +141,52 @@ echo "[9/10] Configuration des permissions..."
 chown -R www-data:www-data "$DEPLOY_DIR"
 chmod -R 775 "$DEPLOY_DIR/storage" "$DEPLOY_DIR/bootstrap/cache"
 
-# --- 10. Configuration Apache (port 8083) ------------------------------------
+# --- 10. Configuration Nginx (port 8083) -------------------------------------
 echo ""
-echo "[10/10] Configuration d'Apache sur le port ${PORT}..."
+echo "[10/10] Configuration de Nginx sur le port ${PORT}..."
 
-cat > /etc/apache2/sites-available/edentba.conf <<EOF
-<VirtualHost *:${PORT}>
-    ServerName ${VPS_IP}
-    DocumentRoot ${DEPLOY_DIR}/public
+# Desactiver Apache s'il est actif
+systemctl stop apache2 2>/dev/null || true
+systemctl disable apache2 2>/dev/null || true
 
-    <Directory ${DEPLOY_DIR}/public>
-        AllowOverride All
-        Require all granted
-    </Directory>
+cat > /etc/nginx/sites-available/edentba <<EOF
+server {
+    listen ${PORT};
+    server_name ${VPS_IP};
 
-    ErrorLog \${APACHE_LOG_DIR}/edentba_error.log
-    CustomLog \${APACHE_LOG_DIR}/edentba_access.log combined
-</VirtualHost>
+    root ${DEPLOY_DIR}/public;
+    index index.php;
+
+    charset utf-8;
+
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php\$ {
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
 EOF
 
-if ! grep -q "Listen ${PORT}" /etc/apache2/ports.conf; then
-    echo "Listen ${PORT}" >> /etc/apache2/ports.conf
-fi
+ln -sf /etc/nginx/sites-available/edentba /etc/nginx/sites-enabled/edentba
+rm -f /etc/nginx/sites-enabled/default
 
-a2dissite 000-default.conf
-a2ensite edentba.conf
-a2enmod rewrite
-
-systemctl restart apache2
-systemctl enable apache2
+nginx -t
+systemctl restart php8.3-fpm
+systemctl restart nginx
+systemctl enable nginx
 
 # --- Ouverture du pare-feu --------------------------------------------------
 if command -v ufw &> /dev/null; then
