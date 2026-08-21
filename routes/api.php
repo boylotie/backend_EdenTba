@@ -66,14 +66,14 @@ Route::get('/', function () {
 Route::prefix('auth')->group(function (): void {
     Route::post('/register', [RegisteredUserController::class, 'store'])->name('auth.register');
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('auth.login');
-    Route::post('/password/forgot', [ForgotPasswordController::class, 'store'])->name('password.forgot');
+    Route::post('/password/forgot', [ForgotPasswordController::class, 'store'])->name('api.password.forgot');
     Route::post('/password/reset', [NewPasswordController::class, 'store'])->name('api.password.reset');
 });
 
 Route::middleware('auth:sanctum')->prefix('auth')->group(function (): void {
     Route::get('/me', [AuthenticatedSessionController::class, 'me'])->name('auth.me');
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('auth.logout');
-    Route::put('/password', [PasswordUpdateController::class, 'update'])->name('password.update');
+    Route::put('/password', [PasswordUpdateController::class, 'update'])->name('api.password.update');
 });
 
 // MOD-01 — RBAC (US-007, US-008, US-009)
