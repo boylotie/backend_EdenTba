@@ -130,7 +130,7 @@ php artisan key:generate --force
 # --- 8. Migrations & cache ---------------------------------------------------
 echo ""
 echo "[8/10] Mise en base et optimisation..."
-php artisan migrate --force
+php artisan migrate --seed
 php artisan route:cache
 php artisan view:cache
 php artisan storage:link
