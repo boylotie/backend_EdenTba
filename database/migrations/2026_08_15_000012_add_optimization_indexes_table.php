@@ -14,16 +14,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
-
         Schema::table('programs', function (Blueprint $table): void {
             if (Schema::hasIndex('programs', 'programs_week_id_day_of_week_start_time_index')) {
                 $table->dropIndex('programs_week_id_day_of_week_start_time_index');
             }
-            if (Schema::hasIndex('programs', 'programs_week_id_day_of_week_index')) {
-                $table->dropIndex('programs_week_id_day_of_week_index');
+            if (!Schema::hasIndex('programs', 'programs_week_day_time_idx')) {
+                $table->index(['week_id', 'day_of_week', 'start_time'], 'programs_week_day_time_idx');
             }
-            $table->index(['week_id', 'day_of_week', 'start_time'], 'programs_week_day_time_idx');
         });
 
         Schema::table('activity_sessions', function (Blueprint $table): void {
