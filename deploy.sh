@@ -31,6 +31,11 @@ echo "=========================================="
 # --- 1. Mise a jour du systeme -----------------------------------------------
 echo ""
 echo "[1/10] Mise a jour du systeme..."
+
+# Supprimer le PPA ondrej/php s'il est present (incompatible Resolute)
+add-apt-repository --remove ppa:ondrej/php -y 2>/dev/null || true
+rm -f /etc/apt/sources.list.d/ondrej-ubuntu-php-*.list 2>/dev/null || true
+
 apt update && apt upgrade -y
 
 # --- 2. Installation des dependances systeme ---------------------------------
@@ -38,7 +43,7 @@ echo ""
 echo "[2/10] Installation de PHP 8.3, MySQL, Apache..."
 apt install -y software-properties-common
 
-# Ajouter le repo Sury PHP (compatible Ubuntu Resolute)
+# Ajouter le repo Sury PHP (compatible Ubuntu Resolute) si absent
 if ! grep -q "packages.sury.org/php" /etc/apt/sources.list.d/*.list 2>/dev/null; then
     echo "Ajout du repo Sury PHP..."
     curl -sSL https://packages.sury.org/php/README.txt | bash
