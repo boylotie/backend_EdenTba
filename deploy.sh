@@ -10,7 +10,7 @@ set -e
 # CONFIGURATION
 # ============================================================================
 
-VPS_IP="100.125.195.64"
+VPS_IP="102.180.188.28"
 PORT="8083"
 SSL_PORT="8443"
 REVERB_PORT="8080"
@@ -34,7 +34,8 @@ fi
 echo "=========================================="
 echo "   DEPLOIEMENT EDENTBA API"
 echo "=========================================="
-echo "  VPS        : $VPS_IP"
+echo "  VPS (public) : $VPS_IP"
+echo "  VPS (tailscale) : 100.125.195.64"
 echo "  HTTP       : $PORT"
 echo "  HTTPS      : $SSL_PORT"
 echo "  Reverb     : $REVERB_PORT"
