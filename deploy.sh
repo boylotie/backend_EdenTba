@@ -92,18 +92,20 @@ apt install -y \
     nginx \
     git \
     unzip \
-    curl
+    curl \
+    ca-certificates \
+    gnupg
 
 echo ""
 echo "PHP installé :"
 php8.3 -v
 
 # ============================================================================
-# 3. INSTALLATION DE COMPOSER
+# 3. INSTALLATION DE COMPOSER + NODE.JS
 # ============================================================================
 
 echo ""
-echo "[3/10] Installation de Composer..."
+echo "[3/11] Installation de Composer..."
 
 if ! command -v composer >/dev/null 2>&1; then
     curl -sS https://getcomposer.org/installer | php
@@ -112,6 +114,20 @@ if ! command -v composer >/dev/null 2>&1; then
 fi
 
 composer --version
+
+echo ""
+echo "[3/11] Installation de Node.js..."
+
+if ! command -v node >/dev/null 2>&1; then
+    mkdir -p /etc/apt/keyrings
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
+    apt update
+    apt install -y nodejs
+fi
+
+node -v
+npm -v
 
 # ============================================================================
 # 4. CONFIGURATION MYSQL
@@ -227,6 +243,16 @@ echo "Installation des packages Composer..."
 # On installe donc les dépendances dev pour permettre le seeding.
 composer install \
     --optimize-autoloader
+
+# ============================================================================
+# NPM INSTALL + BUILD
+# ============================================================================
+
+echo ""
+echo "Installation et build des assets frontend..."
+
+npm install
+npm run build
 
 # ============================================================================
 # CLÉ APPLICATION
