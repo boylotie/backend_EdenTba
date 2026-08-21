@@ -98,6 +98,13 @@ cd "$DEPLOY_DIR"
 # --- 6. Installation des dependances PHP -------------------------------------
 echo ""
 echo "[6/10] Installation des dependances Composer..."
+
+# Creer un .env minimal AVANT composer install pour eviter l'erreur Reverb/Pusher
+if [ ! -f .env ]; then
+    cp .env.example .env
+fi
+sed -i "s|BROADCAST_CONNECTION=.*|BROADCAST_CONNECTION=log|" .env
+
 composer install --no-dev --optimize-autoloader
 
 # --- 7. Configuration .env --------------------------------------------------
