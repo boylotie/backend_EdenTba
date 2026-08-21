@@ -14,18 +14,14 @@ return new class extends Migration
      */
     public function up(): void
     {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+
         Schema::table('programs', function (Blueprint $table): void {
             if (Schema::hasIndex('programs', 'programs_week_id_day_of_week_start_time_index')) {
                 $table->dropIndex('programs_week_id_day_of_week_start_time_index');
             }
             if (Schema::hasIndex('programs', 'programs_week_id_day_of_week_index')) {
-                try {
-                    $table->dropIndex('programs_week_id_day_of_week_index');
-                } catch (\Exception $e) {
-                    DB::statement('SET FOREIGN_KEY_CHECKS=0');
-                    DB::statement('ALTER TABLE programs DROP INDEX programs_week_id_day_of_week_index');
-                    DB::statement('SET FOREIGN_KEY_CHECKS=1');
-                }
+                $table->dropIndex('programs_week_id_day_of_week_index');
             }
             $table->index(['week_id', 'day_of_week', 'start_time'], 'programs_week_day_time_idx');
         });
@@ -37,6 +33,8 @@ return new class extends Migration
         Schema::table('contents', function (Blueprint $table): void {
             $table->index(['status', 'sort_order'], 'contents_status_sort_idx');
         });
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
 
     public function down(): void
