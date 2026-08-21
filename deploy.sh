@@ -103,6 +103,7 @@ echo "[6/10] Installation des dependances Composer..."
 if [ ! -f .env ]; then
     cp .env.example .env
 fi
+sed -i "s|APP_NAME=Eden Tba|APP_NAME=\"Eden Tba\"|" .env
 sed -i "s|BROADCAST_CONNECTION=.*|BROADCAST_CONNECTION=log|" .env
 
 composer install --no-dev --optimize-autoloader
