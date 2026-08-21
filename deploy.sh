@@ -1,4 +1,3 @@
-```bash
 #!/bin/bash
 # ============================================================================
 # Script de déploiement — EdenTba API (Laravel)
@@ -437,4 +436,3 @@ echo "Pense à changer DB_PASS et à utiliser un"
 echo "secret sécurisé pour un environnement réel."
 echo ""
 echo "=========================================="
-```
