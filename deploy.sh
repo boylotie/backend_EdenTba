@@ -136,7 +136,6 @@ php artisan key:generate --force
 echo ""
 echo "[8/10] Mise en base et optimisation..."
 php artisan migrate --force
-php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan storage:link
