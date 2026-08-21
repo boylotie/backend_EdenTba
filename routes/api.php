@@ -67,7 +67,7 @@ Route::prefix('auth')->group(function (): void {
     Route::post('/register', [RegisteredUserController::class, 'store'])->name('auth.register');
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('auth.login');
     Route::post('/password/forgot', [ForgotPasswordController::class, 'store'])->name('password.forgot');
-    Route::post('/password/reset', [NewPasswordController::class, 'store'])->name('password.reset');
+    Route::post('/password/reset', [NewPasswordController::class, 'store'])->name('api.password.reset');
 });
 
 Route::middleware('auth:sanctum')->prefix('auth')->group(function (): void {
