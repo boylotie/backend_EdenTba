@@ -627,7 +627,7 @@ new #[Title('Contenus audio')] class extends Component
 
                 <flux:field>
                     <flux:label>{{ __('Année') }}</flux:label>
-                    <flux:select wire:model="createYearId">
+                    <flux:select wire:model.live="createYearId">
                         <option value="">—</option>
                         @foreach ($this->createYears as $year)
                             <option value="{{ $year['id'] }}">{{ $year['label'] }}</option>
@@ -795,13 +795,13 @@ new #[Title('Contenus audio')] class extends Component
                     </flux:field>
 
                     <flux:field>
-                        <flux:label>{{ __('Année') }}</flux:label>
-                        <flux:select wire:model="editYearId">
-                            <option value="">—</option>
-                            @foreach ($this->editYears as $year)
-                                <option value="{{ $year['id'] }}">{{ $year['label'] }}</option>
-                            @endforeach
-                        </flux:select>
+                    <flux:label>{{ __('Année') }}</flux:label>
+                    <flux:select wire:model.live="editYearId">
+                        <option value="">—</option>
+                        @foreach ($this->editYears as $year)
+                            <option value="{{ $year['id'] }}">{{ $year['label'] }}</option>
+                        @endforeach
+                    </flux:select>
                         <flux:error name="editYearId" />
                     </flux:field>
 
